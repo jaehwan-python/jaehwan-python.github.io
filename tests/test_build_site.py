@@ -11,7 +11,8 @@ class PublishingTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name).resolve()
         for folder in ('notes', 'pages', 'css', 'js', 'assets', 'scripts'):
-            shutil.copytree(ROOT / folder, self.root / folder, ignore=shutil.ignore_patterns('__pycache__'))
+            patterns = ('__pycache__', '*.md') if folder == 'notes' else ('__pycache__',)
+            shutil.copytree(ROOT / folder, self.root / folder, ignore=shutil.ignore_patterns(*patterns))
         shutil.copy2(ROOT / 'index.html', self.root / 'index.html')
 
     def tearDown(self):
@@ -24,6 +25,7 @@ class PublishingTests(unittest.TestCase):
         return p
 
     def test_lifecycle(self):
+        self.write('notes/AI-IT/python/variables.md', '# Test variables')
         note = self.write('notes/AI-IT/python/functions.md', '# Functions\n\nFirst')
         out = build(self.root)
         self.assertEqual((self.root / 'index.html').read_bytes(), (out / 'index.html').read_bytes())
@@ -44,6 +46,7 @@ class PublishingTests(unittest.TestCase):
         self.assertTrue((self.root / 'pages/ai-it/study/python/variables.html').exists())
 
     def test_categories_security_links(self):
+        self.write('notes/AI-IT/python/variables.md', '# Test link target')
         for group, topic in [('AI-IT', 'sql'), ('English', 'grammar'), ('KAU', 'aviation')]:
             self.write(f'notes/{group}/{topic}/sample.md', '# Sample\n\nText')
         self.write('notes/AI-IT/python/images/chart.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>')
@@ -78,6 +81,7 @@ class PublishingTests(unittest.TestCase):
             build(self.root)
 
     def test_direct_category_notes(self):
+        self.write('notes/AI-IT/python/nested.md', '# Nested test note')
         for folder, name, hub in [
             ('AI-IT', 'python_basics', 'ai-it/study'),
             ('English', 'grammar_01', 'english'),
@@ -94,9 +98,24 @@ class PublishingTests(unittest.TestCase):
             self.assertEqual(note.select_one('article h1').get_text(), 'New note')
             self.assertEqual(len(note.select('article ul li')), 2)
             self.assertEqual(len(note.select('article ol li')), 2)
-        self.assertIn('python/variables.html', (out / 'pages/ai-it/study/index.html').read_text(encoding='utf-8'))
+        self.assertIn('python/nested.html', (out / 'pages/ai-it/study/index.html').read_text(encoding='utf-8'))
         for filename in ('AUTHORING',):
             self.assertFalse((out / f'pages/{filename}.html').exists())
+
+    def test_empty_categories_do_not_publish_deleted_notes(self):
+        out = build(self.root)
+        for hub in ('ai-it/study', 'english', 'kau'):
+            soup = BeautifulSoup((out / f'pages/{hub}/index.html').read_text(encoding='utf-8'), 'html.parser')
+            section = soup.find('section', attrs={'aria-labelledby': 'markdown-notes-title'})
+            self.assertIsNotNone(section)
+            self.assertFalse(section.find('a'))
+        for name in ('variables', 'variables-and-types'):
+            path = Path(f'pages/ai-it/study/python/{name}.html')
+            self.assertTrue((self.root / path).is_file())
+            self.assertFalse((out / path).exists())
+            for listing in ('pages/ai-it/study/index.html', 'pages/ai-it/study/python/index.html'):
+                soup = BeautifulSoup((out / listing).read_text(encoding='utf-8'), 'html.parser')
+                self.assertFalse(soup.select(f'a[href$="{name}.html"]'))
 
 
 if __name__ == '__main__':
