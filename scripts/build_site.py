@@ -33,9 +33,9 @@ def route(note):
     parts = note.parts
     if len(parts) < 2 or parts[0] not in CATEGORIES:
         raise ValueError(f'Unsupported note location: {note}')
-    if any(not re.fullmatch(r'[a-z0-9]+(?:[-_][a-z0-9]+)*', p)
+    if any(not re.fullmatch(r'[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*', p)
            for p in (*parts[1:-1], note.stem)) or note.stem == 'index':
-        raise ValueError(f'Use lowercase letters, digits, hyphens or underscores; index.md is reserved: {note}')
+        raise ValueError(f'Use letters, digits, hyphens or underscores; index.md is reserved: {note}')
     group = CATEGORIES[parts[0]]
     prefix = category_home(group).parent
     return prefix.joinpath(*parts[1:]).with_suffix('.html')
@@ -43,6 +43,40 @@ def route(note):
 
 def category_home(group):
     return Path('pages/ai-it/study/index.html') if group == 'ai-it' else Path('pages') / group / 'index.html'
+
+
+def folder_trail(group, folders):
+    return [(LABELS[group], category_home(group))] + [
+        (LABELS.get(name, name), category_home(group).parent.joinpath(*folders[:i + 1], 'index.html'))
+        for i, name in enumerate(folders)]
+
+
+def note_tree(soup, items, hub):
+    """Group the already discovered notes by their preserved output folders."""
+    tree = {}
+    for page, title in items:
+        branch = tree
+        for folder in page.relative_to(hub.parent).parts[:-1]:
+            branch = branch.setdefault(folder, {})
+        branch[page] = title
+
+    def listing(branch, folders=()):
+        ul = soup.new_tag('ul', attrs={'class': 'note-list'})
+        for key, value in branch.items():
+            item = soup.new_tag('li')
+            if isinstance(value, dict):
+                path = hub.parent.joinpath(*folders, key, 'index.html')
+                link = soup.new_tag('a', href=relative(path, hub))
+                link.string = LABELS.get(key, key)
+                item.append(link)
+                item.append(listing(value, (*folders, key)))
+            else:
+                link = soup.new_tag('a', href=relative(key, hub))
+                link.string = value
+                item.append(link)
+            ul.append(item)
+        return ul
+    return listing(tree)
 
 
 def title_of(text, fallback):
@@ -163,6 +197,17 @@ def build(root=ROOT, output=None):
             if name not in legacy and '<!-- Source:' not in original:
                 raise ValueError(f'Output collides with manual page: {name}')
             target.unlink()
+    # Clean old list links even when a new folder differs only in letter case.
+    # Linux Pages keeps Python/ and python/ distinct; Windows aliases them.
+    for index in {output / name for name in legacy}:
+        index = index.parent / 'index.html'
+        if index.is_file():
+            soup = BeautifulSoup(index.read_text(encoding='utf-8'), 'html.parser')
+            for card in soup.select('.card-grid > a'):
+                dest = (index.parent / urlsplit(card.get('href', '')).path).resolve()
+                if dest.relative_to(output).as_posix() in legacy:
+                    card.decompose()
+            index.write_text(str(soup), encoding='utf-8')
     groups = {}
     category_notes = {group: [] for group in CATEGORIES.values()}
     for source in notes:
@@ -172,22 +217,27 @@ def build(root=ROOT, output=None):
         title = title_of(text, source.stem)
         parts = source.relative_to(root / 'notes').parts
         group = CATEGORIES[parts[0]]
-        topic = parts[1] if len(parts) > 2 else None
+        folders = parts[1:-1]
+        topic = '/'.join(folders) if folders else None
         category_notes[group].append((page, title))
         if topic:
             groups.setdefault((group, topic), []).append((page, title))
+            for depth in range(1, len(folders)):
+                groups.setdefault((group, '/'.join(folders[:depth])), [])
         category = category_home(group).parent / topic / 'index.html' if topic else category_home(group)
         group_home = Path('pages/ai-it/study/index.html') if group == 'ai-it' else Path('pages') / group / 'index.html'
         body = render_markdown(text, rel, page, output, routes)
         body = f'<article class="note-content">{body}</article><nav class="note-navigation"><a href="{relative(category, page)}">목록으로 돌아가기</a><a href="{relative(rel, page)}">Markdown 원고</a></nav>'
         target = output / page
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(document(title, body, page, [(LABELS[group], group_home)] + ([(LABELS.get(topic, topic), category)] if topic else [])), encoding='utf-8')
+        target.write_text(document(title, body, page, folder_trail(group, folders)), encoding='utf-8')
     # Include legacy categories even after their last Markdown note is deleted.
     for name in legacy:
         parts = Path(name).parts
         if parts[:3] == ('pages', 'ai-it', 'study'):
-            groups.setdefault(('ai-it', parts[3]), [])
+            if not any(group == 'ai-it' and topic.casefold() == parts[3].casefold()
+                       for group, topic in groups):
+                groups.setdefault(('ai-it', parts[3]), [])
     for (group, topic), items in groups.items():
         category = category_home(group).parent / topic / 'index.html' if topic else category_home(group)
         target = output / category
@@ -199,10 +249,15 @@ def build(root=ROOT, output=None):
                 if dest.relative_to(output).as_posix() not in owned:
                     cards.append(str(card))
         cards += [f'<a class="category-card" href="{relative(page, category)}"><span class="status">Markdown 학습 노트</span><h3>{html.escape(title)}</h3></a>' for page, title in items]
+        children = [child for child_group, child in groups
+                    if child_group == group and Path(child).parent == Path(topic)]
+        cards += [f'<a class="category-card" href="{relative(category_home(group).parent / child / "index.html", category)}"><h3>{html.escape(LABELS.get(Path(child).name, Path(child).name))}</h3></a>' for child in children]
         body = f'<div class="page-heading"><h1>{html.escape(LABELS.get(topic, topic))}</h1></div><section><h2>학습 노트 목록</h2><div class="card-grid">{"".join(cards) or "<p>등록된 노트가 없습니다.</p>"}</div></section>'
         group_home = Path('pages/ai-it/study/index.html') if group == 'ai-it' else Path('pages') / group / 'index.html'
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(document(LABELS.get(topic, topic), body, category, [(LABELS[group], group_home)]), encoding='utf-8')
+        target.write_text(document(LABELS.get(Path(topic).name, Path(topic).name), body, category, folder_trail(group, Path(topic).parts[:-1])), encoding='utf-8')
+        if len(Path(topic).parts) > 1:
+            continue
         hub = output / group_home
         soup = BeautifulSoup(hub.read_text(encoding='utf-8'), 'html.parser')
         grid = soup.select_one('.card-grid')
@@ -226,13 +281,7 @@ def build(root=ROOT, output=None):
         heading = soup.new_tag('h2', id='markdown-notes-title')
         heading.string = '학습 노트 목록'
         section.append(heading)
-        listing = soup.new_tag('ul', attrs={'class': 'note-list'})
-        for page, title in items:
-            item = soup.new_tag('li')
-            link = soup.new_tag('a', href=relative(page, category_home(group)))
-            link.string = title
-            item.append(link)
-            listing.append(item)
+        listing = note_tree(soup, items, category_home(group))
         if items:
             section.append(listing)
         else:

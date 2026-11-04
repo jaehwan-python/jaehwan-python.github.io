@@ -118,5 +118,39 @@ class PublishingTests(unittest.TestCase):
                 self.assertFalse(soup.select(f'a[href$="{name}.html"]'))
 
 
+    def test_recursive_folder_hierarchy(self):
+        samples = [
+            ('AI-IT/Python/01_variables.md', 'ai-it/study/Python/01_variables.html', 'Variables'),
+            ('AI-IT/Python/Basics/02_types.md', 'ai-it/study/Python/Basics/02_types.html', 'Types'),
+            ('English/Grammar/01_tenses.md', 'english/Grammar/01_tenses.html', 'Tenses'),
+            ('KAU/Aviation/01_flight.md', 'kau/Aviation/01_flight.html', 'Flight'),
+        ]
+        for source, page, title in samples:
+            self.write(f'notes/{source}', f'# {title}\n\n[Local](#{title.lower()})')
+        self.write('notes/AI-IT/Python/01_variables.md', '# Variables\n\n[Types](Basics/02_types.md#types)')
+        self.write('notes/AI-IT/Python/Basics/02_types.md', '# Types\n\n[Variables](../01_variables.md#variables)\n[Local](#types)')
+        self.write('notes/AI-IT/Empty/.gitkeep', '')
+        self.write('notes/AUTHORING.md', '# Not a learning note')
+        out = build(self.root)
+        for source, page, title in samples:
+            dest = out / 'pages' / page
+            soup = BeautifulSoup(dest.read_text(encoding='utf-8'), 'html.parser')
+            self.assertIsNotNone(soup.find('h1', id=title.lower()))
+            parent = BeautifulSoup((dest.parent / 'index.html').read_text(encoding='utf-8'), 'html.parser')
+            self.assertTrue(parent.find('a', href=dest.name))
+        hub = BeautifulSoup((out / 'pages/ai-it/study/index.html').read_text(encoding='utf-8'), 'html.parser')
+        tree = hub.find('section', attrs={'aria-labelledby': 'markdown-notes-title'})
+        self.assertTrue(tree.find('a', href='Python/index.html'))
+        basics = tree.find('a', href='Python/Basics/index.html')
+        self.assertTrue(basics.parent.find('a', href='Python/Basics/02_types.html'))
+        self.assertFalse(tree.find('a', href='Empty/index.html'))
+        types = BeautifulSoup((out / 'pages/ai-it/study/Python/Basics/02_types.html').read_text(encoding='utf-8'), 'html.parser')
+        self.assertTrue(types.find('a', href='../01_variables.html#variables'))
+        self.assertEqual([a.get_text() for a in types.select('.breadcrumbs a')], ['Home', 'AI/IT', 'Python', 'Basics'])
+        self.assertIn('Basics/02_types.html#types', (out / 'pages/ai-it/study/Python/01_variables.html').read_text(encoding='utf-8'))
+        for path in out.rglob('*.html'):
+            self.assertNotIn('Not a learning note', path.read_text(encoding='utf-8'))
+
+
 if __name__ == '__main__':
     unittest.main()
