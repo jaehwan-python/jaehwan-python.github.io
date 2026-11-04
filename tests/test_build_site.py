@@ -24,7 +24,7 @@ class PublishingTests(unittest.TestCase):
         return p
 
     def test_lifecycle(self):
-        note = self.write('notes/ai-it/python/functions.md', '# Functions\n\nFirst')
+        note = self.write('notes/AI-IT/python/functions.md', '# Functions\n\nFirst')
         out = build(self.root)
         self.assertEqual((self.root / 'index.html').read_bytes(), (out / 'index.html').read_bytes())
         self.assertEqual((self.root / 'js/main.js').read_bytes(), (out / 'js/main.js').read_bytes())
@@ -35,7 +35,7 @@ class PublishingTests(unittest.TestCase):
         build(self.root)
         self.assertIn('Updated', (out / 'pages/ai-it/study/python/functions.html').read_text(encoding='utf-8'))
         note.unlink()
-        (self.root / 'notes/ai-it/python/variables.md').unlink()
+        (self.root / 'notes/AI-IT/python/variables.md').unlink()
         build(self.root)
         self.assertFalse((out / 'pages/ai-it/study/python/functions.html').exists())
         self.assertFalse((out / 'pages/ai-it/study/python/variables.html').exists())
@@ -44,10 +44,10 @@ class PublishingTests(unittest.TestCase):
         self.assertTrue((self.root / 'pages/ai-it/study/python/variables.html').exists())
 
     def test_categories_security_links(self):
-        for group, topic in [('ai-it', 'sql'), ('english', 'grammar'), ('kau', 'aviation')]:
+        for group, topic in [('AI-IT', 'sql'), ('English', 'grammar'), ('KAU', 'aviation')]:
             self.write(f'notes/{group}/{topic}/sample.md', '# Sample\n\nText')
-        self.write('notes/ai-it/python/images/chart.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>')
-        self.write('notes/ai-it/python/security.md', '# Security\n\n```python\nprint("<tag>")\n```\n\n| A | B |\n| - | - |\n| 1 | 2 |\n\n![Chart](images/chart.svg)\n[Other](variables.md)\n[Heading](#security)\n<script>alert(1)</script>\n<img src="images/chart.svg" onerror="alert(1)">\n[Bad](javascript:alert(1))')
+        self.write('notes/AI-IT/python/images/chart.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>')
+        self.write('notes/AI-IT/python/security.md', '# Security\n\n```python\nprint("<tag>")\n```\n\n| A | B |\n| - | - |\n| 1 | 2 |\n\n![Chart](images/chart.svg)\n[Other](variables.md)\n[Heading](#security)\n<script>alert(1)</script>\n<img src="images/chart.svg" onerror="alert(1)">\n[Bad](javascript:alert(1))')
         out = build(self.root)
         for path in ['ai-it/study/sql', 'english/grammar', 'kau/aviation']:
             self.assertTrue((out / f'pages/{path}/sample.html').exists())
@@ -68,14 +68,35 @@ class PublishingTests(unittest.TestCase):
         out = build(self.root)
         self.assertEqual(manual.read_bytes(), (out / manual.relative_to(self.root)).read_bytes())
         self.assertIn('href="manual.html"', (out / index.relative_to(self.root)).read_text(encoding='utf-8'))
-        self.write('notes/ai-it/python/manual.md', '# Collision')
+        self.write('notes/AI-IT/python/manual.md', '# Collision')
         with self.assertRaisesRegex(ValueError, 'collides'):
             build(self.root)
 
     def test_missing_link(self):
-        self.write('notes/ai-it/python/broken.md', '# Broken\n\n[Missing](missing.md)')
+        self.write('notes/AI-IT/python/broken.md', '# Broken\n\n[Missing](missing.md)')
         with self.assertRaisesRegex(ValueError, 'missing'):
             build(self.root)
+
+    def test_direct_category_notes(self):
+        for folder, name, hub in [
+            ('AI-IT', 'python_basics', 'ai-it/study'),
+            ('English', 'grammar_01', 'english'),
+            ('KAU', 'aviation_01', 'kau'),
+        ]:
+            self.write(f'notes/{folder}/{name}.md',
+                       '# New note\n\n- First\n- Second\n\n1. One\n2. Two')
+        out = build(self.root)
+        for hub, name in [('ai-it/study', 'python_basics'),
+                          ('english', 'grammar_01'), ('kau', 'aviation_01')]:
+            listing = BeautifulSoup((out / f'pages/{hub}/index.html').read_text(encoding='utf-8'), 'html.parser')
+            self.assertTrue(listing.select_one(f'.note-list a[href="{name}.html"]'))
+            note = BeautifulSoup((out / f'pages/{hub}/{name}.html').read_text(encoding='utf-8'), 'html.parser')
+            self.assertEqual(note.select_one('article h1').get_text(), 'New note')
+            self.assertEqual(len(note.select('article ul li')), 2)
+            self.assertEqual(len(note.select('article ol li')), 2)
+        self.assertIn('python/variables.html', (out / 'pages/ai-it/study/index.html').read_text(encoding='utf-8'))
+        for filename in ('AUTHORING',):
+            self.assertFalse((out / f'pages/{filename}.html').exists())
 
 
 if __name__ == '__main__':

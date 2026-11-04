@@ -6,7 +6,7 @@
 
 ## GitHub 웹에서 게시하는 순서
 
-1. main 브랜치의 notes/ai-it/python/ 등 원하는 카테고리 폴더로 이동합니다.
+1. main 브랜치의 notes/AI-IT/, notes/English/, notes/KAU/ 중 원하는 카테고리 폴더로 이동합니다.
 2. Add file → Create new file로 functions.md 같은 파일을 만듭니다.
 3. 첫 줄에 # 함수처럼 제목을 쓰고 본문을 작성합니다.
 4. Commit changes로 main에 반영합니다. 브랜치 보호 시 PR을 만들어 main에 병합합니다.
@@ -19,12 +19,14 @@
 
 | Markdown 원고 | HTML 출력 |
 | --- | --- |
-| notes/ai-it/python/functions.md | pages/ai-it/study/python/functions.html |
-| notes/ai-it/sql/joins.md | pages/ai-it/study/sql/joins.html |
-| notes/english/grammar/tenses.md | pages/english/grammar/tenses.html |
-| notes/kau/aviation/flight-dispatch.md | pages/kau/aviation/flight-dispatch.html |
+| notes/AI-IT/python_basics.md | pages/ai-it/study/python_basics.html |
+| notes/English/grammar_01.md | pages/english/grammar_01.html |
+| notes/KAU/aviation_01.md | pages/kau/aviation_01.html |
+| notes/AI-IT/python/variables.md | pages/ai-it/study/python/variables.html |
 
-ai-it, english, kau 아래 두 번째 폴더가 카테고리입니다. 더 깊은 폴더는 같은 카테고리의 하위 경로로 유지됩니다. 파일·폴더명은 영문 소문자, 숫자, 하이픈으로 작성합니다. index.md는 목록용 예약 이름입니다. notes/ 바로 아래의 안내 문서는 게시 대상이 아닙니다. 카테고리 목록과 상위 Study/허브 링크도 자동 갱신됩니다.
+notes/ 최상위 학습 폴더는 **AI-IT, English, KAU**만 사용합니다. 대소문자를 정확히 맞추세요. AI-IT는 화면에서 AI/IT로 표시됩니다. 각 폴더 바로 아래에 .md 파일을 추가할 수 있고, 기존 python/ 같은 하위 폴더도 유지할 수 있습니다. 세 카테고리의 첫 페이지에 하위 폴더를 포함한 모든 문서 목록이 자동 생성됩니다. 하위 주제 목록도 기존 방식대로 갱신됩니다.
+
+카테고리 아래 파일·폴더명은 영문 소문자, 숫자, 하이픈 또는 밑줄로 작성합니다. index.md는 목록용 예약 이름입니다. notes/AUTHORING.md와 .gitkeep은 게시 목록에 포함하지 않습니다. 첫 H1 제목을 목록에 사용하며 없으면 파일명을 사용합니다. 기존 두 Python 노트는 내용 변경 없이 notes/AI-IT/python/으로 옮겼습니다.
 
 ## Markdown 문법
 
@@ -70,3 +72,15 @@ python scripts/build_site.py --check-only
 ```
 
 _site/를 정적 HTTP 서버로 열어 확인합니다. 빌더는 자신이 만든 .generated-site 표시가 있는 _site/만 지우고 재생성합니다.
+
+```text
+python -m http.server 8000 --directory _site
+```
+
+http://localhost:8000 에서 카테고리와 문서를 확인하세요. 원본 폴더를 직접 열면 자동 생성 목록이 보이지 않습니다. 브라우저에서 폴더를 탐색하거나 JavaScript에 문서 경로를 등록할 필요가 없습니다.
+
+## 검토 후 커밋·푸시
+
+`git status --short`와 `git diff`로 변경 내용을 검토하고, 새 폴더·노트·빌더·테스트·안내서·index.html을 함께 커밋합니다. Windows의 대소문자 변경은 Git에서 `notes/ai-it/` 삭제와 `notes/AI-IT/` 추가(또는 이름 변경)로 잡혔는지 확인하세요. README.md와 기존 노트 내용은 수정할 필요가 없습니다. _site/, .build-deps/는 커밋하지 않습니다.
+
+main에 푸시한 뒤 Actions의 build와 deploy 성공 여부와 실제 사이트의 새 문서를 확인합니다. 이 로컬 작업에서는 커밋·푸시·원격 Pages 설정 변경을 수행하지 않습니다. 따라서 실제 배포 성공 여부는 푸시 후 확인해야 합니다.

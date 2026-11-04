@@ -12,7 +12,8 @@ import bleach
 from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parents[1]
-LABELS = {'ai-it': 'AI / IT', 'english': 'English', 'kau': 'KAU',
+CATEGORIES = {'AI-IT': 'ai-it', 'English': 'english', 'KAU': 'kau'}
+LABELS = {'ai-it': 'AI/IT', 'english': 'English', 'kau': 'KAU',
           'python': 'Python', 'sql': 'SQL', 'javascript': 'JavaScript',
           'html-css': 'HTML / CSS', 'flask-backend': 'Flask / Backend',
           'data-analysis': 'Data Analysis', 'machine-learning': 'Machine Learning',
@@ -30,13 +31,18 @@ def relative(target, page):
 
 def route(note):
     parts = note.parts
-    if len(parts) < 3 or parts[0] not in ('ai-it', 'english', 'kau'):
+    if len(parts) < 2 or parts[0] not in CATEGORIES:
         raise ValueError(f'Unsupported note location: {note}')
-    if any(not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', p)
-           for p in (*parts[:-1], note.stem)) or note.stem == 'index':
-        raise ValueError(f'Use lowercase kebab-case; index.md is reserved: {note}')
-    prefix = Path('pages/ai-it/study') if parts[0] == 'ai-it' else Path('pages') / parts[0]
+    if any(not re.fullmatch(r'[a-z0-9]+(?:[-_][a-z0-9]+)*', p)
+           for p in (*parts[1:-1], note.stem)) or note.stem == 'index':
+        raise ValueError(f'Use lowercase letters, digits, hyphens or underscores; index.md is reserved: {note}')
+    group = CATEGORIES[parts[0]]
+    prefix = category_home(group).parent
     return prefix.joinpath(*parts[1:]).with_suffix('.html')
+
+
+def category_home(group):
+    return Path('pages/ai-it/study/index.html') if group == 'ai-it' else Path('pages') / group / 'index.html'
 
 
 def title_of(text, fallback):
@@ -147,7 +153,7 @@ def build(root=ROOT, output=None):
     (output / '.nojekyll').touch()
     legacy = set(json.loads((root / 'scripts/legacy-notes.json').read_text(encoding='utf-8')))
     notes = sorted(p for p in (root / 'notes').rglob('*.md')
-                   if p.relative_to(root / 'notes').parts[0] in ('ai-it', 'english', 'kau'))
+                   if p.relative_to(root / 'notes').parts[0] in CATEGORIES)
     routes = {p.relative_to(root).as_posix(): output / route(p.relative_to(root / 'notes')) for p in notes}
     owned = legacy | {p.relative_to(output).as_posix() for p in routes.values()}
     for name in owned:
@@ -158,27 +164,32 @@ def build(root=ROOT, output=None):
                 raise ValueError(f'Output collides with manual page: {name}')
             target.unlink()
     groups = {}
+    category_notes = {group: [] for group in CATEGORIES.values()}
     for source in notes:
         rel = source.relative_to(root)
         page = routes[rel.as_posix()].relative_to(output)
         text = source.read_text(encoding='utf-8')
         title = title_of(text, source.stem)
-        group, topic = source.relative_to(root / 'notes').parts[:2]
-        groups.setdefault((group, topic), []).append((page, title))
-        category = Path('pages/ai-it/study') / topic / 'index.html' if group == 'ai-it' else Path('pages') / group / topic / 'index.html'
+        parts = source.relative_to(root / 'notes').parts
+        group = CATEGORIES[parts[0]]
+        topic = parts[1] if len(parts) > 2 else None
+        category_notes[group].append((page, title))
+        if topic:
+            groups.setdefault((group, topic), []).append((page, title))
+        category = category_home(group).parent / topic / 'index.html' if topic else category_home(group)
         group_home = Path('pages/ai-it/study/index.html') if group == 'ai-it' else Path('pages') / group / 'index.html'
         body = render_markdown(text, rel, page, output, routes)
         body = f'<article class="note-content">{body}</article><nav class="note-navigation"><a href="{relative(category, page)}">목록으로 돌아가기</a><a href="{relative(rel, page)}">Markdown 원고</a></nav>'
         target = output / page
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(document(title, body, page, [(LABELS[group], group_home), (LABELS.get(topic, topic), category)]), encoding='utf-8')
+        target.write_text(document(title, body, page, [(LABELS[group], group_home)] + ([(LABELS.get(topic, topic), category)] if topic else [])), encoding='utf-8')
     # Include legacy categories even after their last Markdown note is deleted.
     for name in legacy:
         parts = Path(name).parts
         if parts[:3] == ('pages', 'ai-it', 'study'):
             groups.setdefault(('ai-it', parts[3]), [])
     for (group, topic), items in groups.items():
-        category = Path('pages/ai-it/study') / topic / 'index.html' if group == 'ai-it' else Path('pages') / group / topic / 'index.html'
+        category = category_home(group).parent / topic / 'index.html' if topic else category_home(group)
         target = output / category
         cards = []
         if target.exists():
@@ -206,6 +217,29 @@ def build(root=ROOT, output=None):
             existing.replace_with(link)
         else:
             grid.append(link)
+        hub.write_text(str(soup), encoding='utf-8')
+    # A direct, recursive note list at each existing category entry point.
+    for group, items in category_notes.items():
+        hub = output / category_home(group)
+        soup = BeautifulSoup(hub.read_text(encoding='utf-8'), 'html.parser')
+        section = soup.new_tag('section', attrs={'aria-labelledby': 'markdown-notes-title'})
+        heading = soup.new_tag('h2', id='markdown-notes-title')
+        heading.string = '학습 노트 목록'
+        section.append(heading)
+        listing = soup.new_tag('ul', attrs={'class': 'note-list'})
+        for page, title in items:
+            item = soup.new_tag('li')
+            link = soup.new_tag('a', href=relative(page, category_home(group)))
+            link.string = title
+            item.append(link)
+            listing.append(item)
+        if items:
+            section.append(listing)
+        else:
+            empty = soup.new_tag('p', attrs={'class': 'empty-note'})
+            empty.string = '등록된 노트가 없습니다.'
+            section.append(empty)
+        soup.select_one('main').insert(2, section)
         hub.write_text(str(soup), encoding='utf-8')
     (output / 'generated-manifest.json').write_text(json.dumps(sorted(owned), indent=2), encoding='utf-8')
     validate(output)
