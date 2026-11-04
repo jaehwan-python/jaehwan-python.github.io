@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Python 변수와 자료형 — Look at Me 학습 아카이브">
+  <title>변수와 자료형 | Python | Look at Me</title>
+  <link rel="stylesheet" href="../../../../css/archive.css">
+</head>
+<body>
+  <a class="skip-link" href="#archive-main">본문으로 바로가기</a>
+  <header class="archive-header"><a class="brand" href="../../../../index.html">Look at Me<span> / Learning Archive</span></a><a class="home-link" href="../../../../index.html">← 메인 홈페이지</a></header>
+  <main id="archive-main" class="note-main">
+    <nav class="breadcrumbs" aria-label="현재 위치"><ol><li><a href="../../../../index.html">Home</a></li><li><a href="../index.html">AI / IT</a></li><li><a href="../index.html">Study</a></li><li><a href="index.html">Python</a></li><li aria-current="page">변수와 자료형</li></ol></nav>
+    <!-- Source: notes/ai-it/python/variables-and-types.md. Manually converted; no runtime Markdown renderer. -->
+    <article class="note-content" aria-labelledby="note-title">
+      <h1 id="note-title">변수와 자료형</h1>
+      <blockquote><p>예제 콘텐츠: 게시 구조를 설명하기 위해 Codex가 작성한 샘플입니다. 사용자가 작성한 실제 학습 기록이 아닙니다.</p></blockquote>
+      <h2>변수에 값 연결하기</h2>
+      <p>변수 이름을 통해 값을 참조할 수 있습니다. <code>=</code>는 값을 변수 이름에 연결하는 대입 연산자입니다.</p>
+      <pre tabindex="0" aria-label="Python 변수 대입 예제"><code class="language-python">name = "Jaehwan"
+age = 20
+height = 175.5
+is_learning = True
+
+print(name)
+print(type(age))  # &lt;class 'int'&gt;</code></pre>
+      <h2>기본 자료형</h2>
+      <div class="table-scroll" role="region" aria-label="기본 자료형 표" tabindex="0"><table><thead><tr><th scope="col">자료형</th><th scope="col">예시</th><th scope="col">설명</th></tr></thead><tbody>
+        <tr><td><code>str</code></td><td><code>"Hello"</code></td><td>문자열</td></tr>
+        <tr><td><code>int</code></td><td><code>20</code></td><td>정수</td></tr>
+        <tr><td><code>float</code></td><td><code>175.5</code></td><td>실수</td></tr>
+        <tr><td><code>bool</code></td><td><code>True</code></td><td>참 또는 거짓</td></tr>
+      </tbody></table></div>
+      <h2>확인할 내용</h2>
+      <ul><li>변수 이름은 값 자체가 아니라 값을 참조하는 이름입니다.</li><li><code>type()</code>으로 값의 자료형을 확인할 수 있습니다.</li><li>같은 이름에 다른 자료형의 값을 다시 대입할 수 있습니다.</li></ul>
+      <h2>간단한 예제</h2>
+      <pre tabindex="0" aria-label="Python 재대입 예제"><code class="language-python">value = 10
+print(type(value))  # &lt;class 'int'&gt;
+
+value = "ten"
+print(type(value))  # &lt;class 'str'&gt;</code></pre>
+      <p>이 문서는 예제입니다. 본인의 설명과 실습 결과로 바꾼 뒤 대응하는 HTML도 함께 갱신하세요.</p>
+    </article>
+    <nav class="note-navigation" aria-label="노트 내비게이션"><a href="../index.html">← 뒤로: Study</a><a href="index.html">Python 목록으로 돌아가기</a><a href="../../../../notes/ai-it/python/variables-and-types.md">Markdown 원고 보기</a></nav>
+  </main>
+  <footer>Look at Me · Jaehwan의 학습 아카이브</footer>
+</body>
+</html>
