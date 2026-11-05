@@ -20,6 +20,9 @@ LABELS = {'ai-it': 'AI/IT', 'english': 'English', 'kau': 'KAU',
           'deep-learning': 'Deep Learning', 'git-github': 'Git / GitHub',
           'grammar': 'Grammar', 'voca': 'Voca', 'communication': 'Communication',
           'aviation': 'Aviation', 'aerospace': 'Aerospace'}
+AI_TOPICS = ('Python', 'SQL', 'HTML-CSS', 'JavaScript', 'Flask-Backend',
+             'Data-Analysis', 'Machine-Learning', 'Deep-Learning', 'Git-GitHub')
+LABELS.update({topic: LABELS[topic.lower()] for topic in AI_TOPICS})
 TAGS = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'img', 'pre', 'code',
         'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'blockquote',
         'em', 'strong', 'del', 'hr', 'br'}
@@ -231,6 +234,12 @@ def build(root=ROOT, output=None):
         target = output / page
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(document(title, body, page, folder_trail(group, folders)), encoding='utf-8')
+    # Keep the nine study categories available even when their folders are empty.
+    # Honor existing lowercase source folders without creating case-only duplicates.
+    for topic in AI_TOPICS:
+        actual = next((name for group, name in groups
+                       if group == 'ai-it' and name.casefold() == topic.casefold()), topic)
+        groups.setdefault(('ai-it', actual), [])
     # Include legacy categories even after their last Markdown note is deleted.
     for name in legacy:
         parts = Path(name).parts
@@ -265,13 +274,27 @@ def build(root=ROOT, output=None):
             raise ValueError(f'Missing category grid: {group_home}')
         label = LABELS.get(topic, topic)
         existing = next((c for c in grid.find_all(recursive=False) if c.find('h3') and c.h3.get_text(strip=True) == label), None)
-        link = soup.new_tag('a', href=relative(category, group_home), attrs={'class': 'category-card'})
-        heading = soup.new_tag('h3'); heading.string = label; link.append(heading)
-        status = soup.new_tag('p'); status.string = f'학습 노트 {len(items)}개'; link.append(status)
-        if existing:
-            existing.replace_with(link)
+        count = sum(1 for page, _ in category_notes[group]
+                    if page.is_relative_to(category.parent))
+        if existing and group == 'ai-it':
+            # Preserve card classes, heading/status wrappers and spacing.
+            existing.select_one('.status').string = f'학습 노트 {count}개' if count else '준비 중'
+            if existing.name == 'a':
+                existing['href'] = relative(category, group_home)
+            else:
+                existing.name = 'a'
+                existing['href'] = relative(category, group_home)
+                existing['style'] = 'color: inherit; text-decoration: none;'
+                message = existing.select_one('.note-list li')
+                message.string = f'학습 노트 {count}개 · 목록 보기 →' if count else '등록된 학습 노트가 아직 없습니다.'
         else:
-            grid.append(link)
+            link = soup.new_tag('a', href=relative(category, group_home), attrs={'class': 'category-card'})
+            heading = soup.new_tag('h3'); heading.string = label; link.append(heading)
+            status = soup.new_tag('p'); status.string = f'학습 노트 {count}개'; link.append(status)
+            if existing:
+                existing.replace_with(link)
+            else:
+                grid.append(link)
         hub.write_text(str(soup), encoding='utf-8')
     # A direct, recursive note list at each existing category entry point.
     for group, items in category_notes.items():

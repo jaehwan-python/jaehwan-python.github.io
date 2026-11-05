@@ -3,7 +3,7 @@ import shutil
 import tempfile
 import unittest
 from bs4 import BeautifulSoup
-from scripts.build_site import ROOT, build
+from scripts.build_site import ROOT, AI_TOPICS, LABELS, build
 
 
 class PublishingTests(unittest.TestCase):
@@ -55,7 +55,7 @@ class PublishingTests(unittest.TestCase):
         for path in ['ai-it/study/sql', 'english/grammar', 'kau/aviation']:
             self.assertTrue((out / f'pages/{path}/sample.html').exists())
             self.assertIn('href="sample.html"', (out / f'pages/{path}/index.html').read_text(encoding='utf-8'))
-        self.assertIn('sql/index.html', (out / 'pages/ai-it/study/index.html').read_text(encoding='utf-8'))
+        self.assertIn('sql/index.html', (out / 'pages/ai-it/study/index.html').read_text(encoding='utf-8').casefold())
         soup = BeautifulSoup((out / 'pages/ai-it/study/python/security.html').read_text(encoding='utf-8'), 'html.parser')
         self.assertFalse(soup.find('script'))
         self.assertFalse(soup.select('[onerror], a[href^="javascript:"]'))
@@ -74,6 +74,52 @@ class PublishingTests(unittest.TestCase):
         self.write('notes/AI-IT/python/manual.md', '# Collision')
         with self.assertRaisesRegex(ValueError, 'collides'):
             build(self.root)
+
+    def test_nine_study_categories_and_automatic_counts(self):
+        self.write('notes/AI-IT/Python/01_variables.md', '# Variables')
+        self.write('notes/AI-IT/SQL/query.md', '# SQL only')
+        out = build(self.root)
+        hub_path = out / 'pages/ai-it/study/index.html'
+        original = BeautifulSoup((self.root / 'pages/ai-it/study/index.html').read_text(encoding='utf-8'), 'html.parser')
+
+        def check(python_count):
+            hub = BeautifulSoup(hub_path.read_text(encoding='utf-8'), 'html.parser')
+            cards = hub.select('.card-grid > *')
+            self.assertEqual(len(cards), 9)
+            for before, card, topic in zip(original.select('.card-grid > *'), cards, AI_TOPICS):
+                self.assertEqual(card.get('class'), before.get('class'))
+                self.assertEqual(card.h3.get_text(), LABELS[topic])
+                link = card if card.name == 'a' else card.h3.a
+                self.assertEqual(link['href'], f'{topic}/index.html')
+                self.assertTrue((hub_path.parent / link['href']).is_file())
+                count = python_count if topic == 'Python' else 1 if topic == 'SQL' else 0
+                self.assertEqual(card.select_one('.status').get_text(), f'학습 노트 {count}개' if count else '준비 중')
+            python = (hub_path.parent / 'Python/index.html').read_text(encoding='utf-8')
+            self.assertIn('Variables', python)
+            self.assertNotIn('SQL only', python)
+            self.assertNotIn('Variables', (hub_path.parent / 'SQL/index.html').read_text(encoding='utf-8'))
+
+        check(1)
+        self.write('notes/AI-IT/Python/Basics/Advanced/02_operators.md', '# Operators\n\n[Variables](../../01_variables.md)')
+        build(self.root)
+        check(2)
+        nested = hub_path.parent / 'Python/Basics/Advanced/02_operators.html'
+        self.assertIn('../../01_variables.html', nested.read_text(encoding='utf-8'))
+        self.assertIn('Advanced/index.html', (hub_path.parent / 'Python/Basics/index.html').read_text(encoding='utf-8'))
+        for name in ('css/archive.css', 'css/style.css', 'js/main.js', 'index.html'):
+            self.assertEqual((self.root / name).read_bytes(), (out / name).read_bytes())
+
+    def test_existing_python_note_is_published_without_content_changes(self):
+        source = ROOT / 'notes/AI-IT/Python/01_variables_and_types.md'
+        target = self.root / source.relative_to(ROOT)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        out = build(self.root)
+        listing = out / 'pages/ai-it/study/Python/index.html'
+        soup = BeautifulSoup(listing.read_text(encoding='utf-8'), 'html.parser')
+        self.assertTrue(soup.find('a', href='01_variables_and_types.html'))
+        self.assertEqual(source.read_bytes(), target.read_bytes())
+        self.assertTrue((listing.parent / '01_variables_and_types.html').is_file())
 
     def test_missing_link(self):
         self.write('notes/AI-IT/python/broken.md', '# Broken\n\n[Missing](missing.md)')
@@ -98,7 +144,7 @@ class PublishingTests(unittest.TestCase):
             self.assertEqual(note.select_one('article h1').get_text(), 'New note')
             self.assertEqual(len(note.select('article ul li')), 2)
             self.assertEqual(len(note.select('article ol li')), 2)
-        self.assertIn('python/nested.html', (out / 'pages/ai-it/study/index.html').read_text(encoding='utf-8'))
+        self.assertIn('python/nested.html', (out / 'pages/ai-it/study/index.html').read_text(encoding='utf-8').casefold())
         for filename in ('AUTHORING',):
             self.assertFalse((out / f'pages/{filename}.html').exists())
 

@@ -6,6 +6,32 @@
 
 ## GitHub 웹에서 게시하는 순서
 
+AI/IT Study의 9개 카테고리는 다음 실제 폴더에 연결됩니다. 각 폴더의 `.gitkeep`은 유지하세요.
+
+| 화면 카테고리 | notes/AI-IT/ 아래 폴더 |
+| --- | --- |
+| Python | Python/ |
+| SQL | SQL/ |
+| HTML / CSS | HTML-CSS/ |
+| JavaScript | JavaScript/ |
+| Flask / Backend | Flask-Backend/ |
+| Data Analysis | Data-Analysis/ |
+| Machine Learning | Machine-Learning/ |
+| Deep Learning | Deep-Learning/ |
+| Git / GitHub | Git-GitHub/ |
+
+예를 들어 GitHub에서 `notes/AI-IT/Python` → **Add file → Create new file**로
+`02_operators.md`를 만들고 첫 줄에 `# 02. 연산자`와 학습 내용을 작성합니다.
+**Commit changes**로 main에 반영하면 기존 GitHub Actions가 테스트·빌드·배포하고,
+사이트 **AI/IT → Study → Python**에 문서가 자동 등록됩니다.
+HTML·CSS·JavaScript를 수정할 필요가 없습니다.
+
+카테고리 문서 수는 여러 단계의 하위 폴더 문서까지 합산합니다. 문서가 없는 9개
+카테고리도 유지하며 `준비 중`으로 표시합니다. 카테고리 제목을 클릭하면 목록으로 이동합니다.
+`Python/Basics/02_types.md`처럼 하위 폴더를 추가해도 자동으로 탐색합니다.
+기존 변수와 자료형 원고는 `notes/AI-IT/Python/01_variables_and_types.md`에 있으며
+`pages/ai-it/study/Python/01_variables_and_types.html`로 게시됩니다.
+
 1. main 브랜치의 notes/AI-IT/, notes/English/, notes/KAU/ 중 원하는 카테고리 폴더로 이동합니다.
 2. Add file → Create new file로 functions.md 같은 파일을 만듭니다.
 3. 첫 줄에 # 함수처럼 제목을 쓰고 본문을 작성합니다.
@@ -22,9 +48,9 @@
 | notes/AI-IT/python_basics.md | pages/ai-it/study/python_basics.html |
 | notes/English/grammar_01.md | pages/english/grammar_01.html |
 | notes/KAU/aviation_01.md | pages/kau/aviation_01.html |
-| notes/AI-IT/python/functions.md | pages/ai-it/study/python/functions.html |
+| notes/AI-IT/Python/functions.md | pages/ai-it/study/Python/functions.html |
 
-notes/ 최상위 학습 폴더는 **AI-IT, English, KAU**만 사용합니다. 대소문자를 정확히 맞추세요. AI-IT는 화면에서 AI/IT로 표시됩니다. 각 폴더 바로 아래에 .md 파일을 추가할 수 있고, 기존 python/ 같은 하위 폴더도 유지할 수 있습니다. 세 카테고리의 첫 페이지에 하위 폴더를 포함한 모든 문서 목록이 자동 생성됩니다. 하위 주제 목록도 기존 방식대로 갱신됩니다.
+notes/ 최상위 학습 폴더는 **AI-IT, English, KAU**만 사용합니다. 대소문자를 정확히 맞추세요. AI-IT는 화면에서 AI/IT로 표시됩니다. AI-IT 학습 노트는 위 표의 해당 주제 폴더에 작성하세요. 각 최상위 폴더 바로 아래의 .md 파일도 지원하며, 세 카테고리의 첫 페이지에 하위 폴더를 포함한 모든 문서 목록이 자동 생성됩니다. 하위 주제 목록도 자동으로 갱신됩니다.
 
 카테고리 아래 파일·폴더명은 영문 대소문자, 숫자, 하이픈 또는 밑줄로 작성합니다. index.md는 목록용 예약 이름입니다. notes/AUTHORING.md와 .gitkeep은 게시 목록에 포함하지 않습니다. 첫 H1 제목을 목록에 사용하며 없으면 파일명을 사용합니다. 위 경로는 작성 예시이며 기존 문서의 존재를 뜻하지 않습니다. 원격에서 삭제한 기존 Python Markdown 문서는 복구하지 않습니다.
 
@@ -32,7 +58,17 @@ notes/ 최상위 학습 폴더는 **AI-IT, English, KAU**만 사용합니다. �
 
 ```text
 notes/
-├── AI-IT/.gitkeep
+├── AI-IT/
+│   ├── .gitkeep
+│   ├── Python/.gitkeep
+│   ├── SQL/.gitkeep
+│   ├── HTML-CSS/.gitkeep
+│   ├── JavaScript/.gitkeep
+│   ├── Flask-Backend/.gitkeep
+│   ├── Data-Analysis/.gitkeep
+│   ├── Machine-Learning/.gitkeep
+│   ├── Deep-Learning/.gitkeep
+│   └── Git-GitHub/.gitkeep
 ├── English/.gitkeep
 ├── KAU/.gitkeep
 └── AUTHORING.md
@@ -40,7 +76,7 @@ notes/
 
 ## Markdown 문법
 
-하위 폴더는 여러 단계로 만들 수 있습니다. 예를 들어 `notes/AI-IT/Python/Basics/02_types.md`는 `pages/ai-it/study/Python/Basics/02_types.html`로 게시됩니다. 카테고리 목록에는 폴더 트리가 나타나고, 각 폴더의 자동 목록 페이지와 문서의 경로 안내로 이동할 수 있습니다. 문서가 없는 새 폴더는 목록에 표시하지 않습니다. 기존 수동 카테고리는 유지합니다.
+하위 폴더는 여러 단계로 만들 수 있습니다. 예를 들어 `notes/AI-IT/Python/Basics/02_types.md`는 `pages/ai-it/study/Python/Basics/02_types.html`로 게시됩니다. 카테고리 목록에는 폴더 트리가 나타나고, 각 폴더의 자동 목록 페이지와 문서의 경로 안내로 이동할 수 있습니다. 지정된 9개 카테고리 외에 문서가 없는 새 폴더는 목록에 표시하지 않습니다. 기존 수동 카테고리는 유지합니다.
 
 폴더와 파일의 대소문자를 그대로 유지하므로 링크에도 정확히 맞추세요. Windows에서 혼동되지 않도록 `Python`과 `python`처럼 대소문자만 다른 새 폴더를 함께 만들지 않는 것을 권장합니다. `index.md`는 자동 목록 페이지를 위한 예약 이름입니다.
 
